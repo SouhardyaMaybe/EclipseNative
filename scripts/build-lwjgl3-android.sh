@@ -45,9 +45,12 @@ fi
         CC="${TRIPLE_PREFIX}${ANDROID_API}-clang" \
         CXX="${TRIPLE_PREFIX}${ANDROID_API}-clang++"
     make -j"$(nproc)"
+    # libffi builds into a host-triple subdirectory; installing to the
+    # prefix is what makes the artifact land at a predictable path.
+    make install
 )
 cp "libffi/${TARGET}-build/lib/libffi.a" "${LWJGL_NATIVE}/" 2>/dev/null \
-    || cp libffi/.libs/libffi.a "${LWJGL_NATIVE}/"
+    || cp "libffi/${TARGET}/.libs/libffi.a" "${LWJGL_NATIVE}/"
 
 # --- freetype (shared, shipped inside the aar) -----------------------------
 if [[ ! -d freetype ]]; then
