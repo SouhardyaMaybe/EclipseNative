@@ -93,6 +93,10 @@ fi
 apt list --installed 2>/dev/null | grep -q "^ant/" || { sudo apt-get update -q && sudo apt-get install -y -q ant; }
 ant init
 export LWJGL_BUILD_OFFLINE=true
+# `yes` exits with SIGPIPE once ant closes stdin; under pipefail that would
+# fail the build even when ant succeeds, so relax it for this pipeline only
+# (ant's own exit status still drives set -e).
+set +o pipefail
 yes | ant -Dplatform.linux=true \
     -Dbinding.assimp=false -Dbinding.bgfx=false -Dbinding.cuda=false \
     -Dbinding.egl=false -Dbinding.fmod=false -Dbinding.harfbuzz=false \
@@ -110,6 +114,7 @@ yes | ant -Dplatform.linux=true \
     -Dbuild.type=release/3.3.3 \
     -Djavadoc.skip=true \
     compile compile-native release
+set -o pipefail
 
 # --- collect outputs matching the shipped aar contract ----------------------
 find "${LWJGL_NATIVE}" -maxdepth 1 -name 'liblwjgl*.so' -exec cp {} "${ABI_OUT_DIR}/" \;
