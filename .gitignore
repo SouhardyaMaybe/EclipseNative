@@ -1,0 +1,19 @@
+# Gradle / build outputs
+.gradle/
+build/
+out/
+*.iml
+
+# Native build trees produced by the scripts
+lwjgl3/
+openal-soft/
+oboe/
+libffi/
+freetype-*/
+
+# IDE
+.idea/
+.vscode/
+.settings/
+.project
+.classpath
