@@ -35,11 +35,16 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
           df -h
 
-      - name: Set up JDK 17
+      # JDK 17 runs the build; JDK 8 is installed as well because LWJGL's
+      # ant build hard-fails without a JAVA8_HOME on JDK 9+. The last entry
+      # wins JAVA_HOME, so 17 stays the active JDK.
+      - name: Set up JDKs
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: |
+            8
+            17
 
       - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@v3

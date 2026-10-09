@@ -82,6 +82,14 @@ mkdir -p bin/classes/generator bin/classes/templates/META-INF
 touch bin/classes/generator/generated-touch.txt bin/classes/templates/META-INF/touch.txt
 
 # --- LWJGL native build ------------------------------------------------------
+# LWJGL's ant build hard-fails on JDK 9+ without a JAVA8_HOME (see the
+# -check-release-jdk target); setup-java exports JAVA_HOME_8_X64 for the
+# secondary JDK 8 install.
+export JAVA8_HOME="${JAVA8_HOME:-${JAVA_HOME_8_X64:-}}"
+if [[ -z "${JAVA8_HOME}" ]]; then
+    echo "JAVA8_HOME is not set and JAVA_HOME_8_X64 is unavailable" >&2
+    exit 1
+fi
 apt list --installed 2>/dev/null | grep -q "^ant/" || { sudo apt-get update -q && sudo apt-get install -y -q ant; }
 ant init
 export LWJGL_BUILD_OFFLINE=true
