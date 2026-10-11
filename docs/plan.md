@@ -65,7 +65,13 @@ ABIs map to the launcher's arch names: `arm`->armeabi-v7a,
   (`android.toolchain.cmake`, ABI + API 21), Oboe dependency
   (`cmake/FindOboe.cmake` / `ALSOFT_OBOE_ENABLED`), build `libopenal.so`,
   strip with `llvm-strip`.
-- Packaging: `openal-android` Android-library module, same CI pattern.
+- Packaging: `openal-android` Android-library module, same CI pattern. The
+  `assets/licenses/` texts (the 3 files listed in section 1: OBOE_APACHE2,
+  OPENAL-SOFT_GPL2, PFFFT_LICENSE) are committed under
+  `openal-android/src/main/assets/licenses/` so AGP packages them into the
+  aar, restoring `assets/licenses/*` (native-v1.0.1 shipped only a
+  placeholder README there; texts are taken verbatim from the previously
+  shipped aar).
 
 ## 4. CI shape
 
