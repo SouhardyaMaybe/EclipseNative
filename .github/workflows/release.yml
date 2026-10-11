@@ -1,0 +1,215 @@
+name: release
+
+# Tag-triggered release pipeline (tags: native-v*).
+#
+# Builds both native modules (lwjgl3-android, openal-android), stages the
+# aars under the names the launcher app expects, adds SHA256SUMS.txt, and
+# creates the GitHub release with a body mapping each asset to its app path.
+# The build/assemble matrix mirrors build-native.yml; that workflow stays the
+# CI build workflow, but its tag publishing step lives here so that exactly
+# one workflow writes the release (no concurrent release creation races).
+#
+# Note: lwjgl-glfw-classes.jar is intentionally NOT an asset of this
+# release - no module in this repository produces it (both modules are
+# pure-jni with an empty classes.jar). It comes from the launcher repo's
+# :jre_lwjgl3glfw module; see README.md and docs/plan.md section 6.
+
+on:
+  push:
+    tags:
+      - "native-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NDK_VERSION: "25.2.9519653"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [lwjgl3, openal]
+        arch: [arm, arm64, x86, x86_64]
+    name: "${{ matrix.component }}-${{ matrix.arch }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
+          df -h
+
+      # JDK 17 runs the build; JDK 8 is installed as well because LWJGL's
+      # ant build hard-fails without a JAVA8_HOME on JDK 9+. The last entry
+      # wins JAVA_HOME, so 17 stays the active JDK.
+      - name: Set up JDKs
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+
+      - name: Set up Android SDK and NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install NDK
+        run: sdkmanager "ndk;${{ env.NDK_VERSION }}"
+
+      - name: Build natives
+        env:
+          ECLIPSE_ARCH: ${{ matrix.arch }}
+        run: |
+          if [ "${{ matrix.component }}" = "lwjgl3" ]; then
+            bash scripts/build-lwjgl3-android.sh "${{ matrix.arch }}"
+          else
+            bash scripts/build-openal-android.sh "${{ matrix.arch }}"
+          fi
+
+      - name: Upload per-ABI .so files
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.component }}-so-${{ matrix.arch }}
+          path: out/so/
+          if-no-files-found: error
+
+  assemble:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: lwjgl3
+            module: lwjgl3-android
+            aar: lwjgl3-natives-release.aar
+          - component: openal
+            module: openal-android
+            aar: openal-soft-release.aar
+    name: "assemble-${{ matrix.component }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # AGP strips jniLibs at packaging time, so the NDK is needed here too.
+      - name: Set up Android SDK and NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install NDK and platform
+        run: |
+          sdkmanager "ndk;${{ env.NDK_VERSION }}" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Download per-ABI .so files
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ matrix.component }}-so-*
+          path: ${{ matrix.module }}/src/main/jniLibs
+          merge-multiple: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Assemble aar
+        run: gradle ":${{ matrix.module }}:assembleRelease" --no-daemon --stacktrace
+
+      - name: Upload aar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.component }}-aar
+          path: ${{ matrix.module }}/build/outputs/aar/*.aar
+          if-no-files-found: error
+
+  release:
+    name: release
+    needs: assemble
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download aar artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-aar"
+          path: dist
+          merge-multiple: true
+
+      # Staging step. Each module sets base.archivesName so the produced
+      # file name already equals the app-expected name; assert it rather
+      # than assume, and fail loudly (never silently drop an asset).
+      - name: Stage assets under app-expected names
+        run: |
+          set -euo pipefail
+          ls -la dist
+          for f in lwjgl3-natives-release.aar openal-soft-release.aar; do
+            if [ ! -f "dist/${f}" ]; then
+              echo "ERROR: staged asset missing: ${f}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Generate SHA256SUMS.txt
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum lwjgl3-natives-release.aar openal-soft-release.aar > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          cat > notes.md <<EOF
+          ## EclipseNative ${TAG}
+
+          Tag-triggered build from \`.github/workflows/release.yml\` at \`${GITHUB_SHA}\`.
+
+          ### Asset -> app path mapping
+
+          | Release asset | Built by module | App path (in the launcher repo) |
+          | --- | --- | --- |
+          | \`lwjgl3-natives-release.aar\` | \`:lwjgl3-android\` | \`EclipseLauncher/libs/lwjgl3-natives-release.aar\` |
+          | \`openal-soft-release.aar\` | \`:openal-android\` | \`EclipseLauncher/libs/openal-soft-release.aar\` |
+          | \`SHA256SUMS.txt\` | (generated at staging) | checksums for the two aars above: \`sha256sum -c SHA256SUMS.txt\` |
+
+          Produced names already equal the app-expected names (each module sets
+          \`base.archivesName\` in its \`build.gradle.kts\`), so staging required
+          no renames.
+
+          ### Not included
+
+          - \`lwjgl-glfw-classes.jar\` (app path
+            \`EclipseLauncher/src/main/assets/components/lwjgl3/lwjgl-glfw-classes.jar\`)
+            is **not** produced by this repository: both modules here are pure-jni
+            libraries with an empty \`classes.jar\`. The jar comes from the launcher
+            repo's \`:jre_lwjgl3glfw\` module (see \`README.md\` and \`docs/plan.md\`
+            section 6, "Future: jre_lwjgl3glfw migration"). It is deliberately
+            absent from this release rather than silently substituted.
+          EOF
+          gh release create "${TAG}" dist/* \
+            --verify-tag \
+            --title "${TAG}" \
+            --notes-file notes.md

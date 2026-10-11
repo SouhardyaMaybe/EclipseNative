@@ -130,8 +130,7 @@ jobs:
           path: ${{ matrix.module }}/build/outputs/aar/*.aar
           if-no-files-found: error
 
-      - name: Publish aar to tag
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ matrix.module }}/build/outputs/aar/*.aar
+      # Release publishing moved to .github/workflows/release.yml (trigger:
+      # native-v* tags) so exactly one workflow creates and writes the
+      # GitHub release. This workflow keeps building on native-* tag pushes
+      # and on manual dispatch; it no longer attaches assets itself.
