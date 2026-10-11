@@ -117,10 +117,29 @@ yes | ant -Dplatform.linux=true \
 set -o pipefail
 
 # --- collect outputs matching the shipped aar contract ----------------------
-find "${LWJGL_NATIVE}" -maxdepth 1 -name 'liblwjgl*.so' -exec cp {} "${ABI_OUT_DIR}/" \;
+# Recursive, same as the reference ci_build_android.bash: only the core
+# library (liblwjgl.so) is linked into ${LWJGL_NATIVE} itself; each binding
+# module links its liblwjgl_<binding>.so into a per-module subdirectory
+# (${lib.native}/${module.<binding>.path}, e.g. .../org/lwjgl/opengl/). A
+# top-level-only find silently drops liblwjgl_opengl/_nanovg/_stb/_tinyfd/
+# _vma.so (native-v1.0.0 shipped none of them). GLFW is deliberately absent:
+# upstream LWJGL does not build desktop GLFW for Android; the launcher ships
+# its own jre_lwjgl3glfw bindings.
+find "${LWJGL_NATIVE}" -name 'liblwjgl*.so' -exec cp {} "${ABI_OUT_DIR}/" \;
 cp "${LWJGL_NATIVE}/libfreetype.so" "${ABI_OUT_DIR}/"
 if [[ -f "${LWJGL_NATIVE}/shaderc/libshaderc.so" ]]; then
     cp "${LWJGL_NATIVE}/shaderc/libshaderc.so" "${ABI_OUT_DIR}/"
 fi
+
+# Fail loudly rather than release an aar that is missing a native library the
+# launcher loads (the native-v1.0.0 gap: missing binding libs went unnoticed
+# until the aar was inspected).
+for lib in liblwjgl.so liblwjgl_opengl.so liblwjgl_nanovg.so liblwjgl_stb.so \
+    liblwjgl_tinyfd.so liblwjgl_vma.so libfreetype.so libshaderc.so; do
+    if [[ ! -s "${ABI_OUT_DIR}/${lib}" ]]; then
+        echo "ERROR: expected non-empty ${lib} for ${NDK_ABI} in ${ABI_OUT_DIR}" >&2
+        exit 1
+    fi
+done
 
 echo "produced:" && ls -la "${ABI_OUT_DIR}"

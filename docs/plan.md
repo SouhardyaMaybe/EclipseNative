@@ -47,8 +47,14 @@ ABIs map to the launcher's arch names: `arm`->armeabi-v7a,
   4. Collect `liblwjgl*.so`, `libfreetype.so`, `libshaderc.so` into
      `jni/<abi>/`.
 - Packaging: `lwjgl3-android` Android-library module; CI copies the four ABI
-  outputs into `src/main/jniLibs/`, adds `assets/licenses/` texts, runs
-  `assembleRelease`.
+  outputs into `src/main/jniLibs/`, runs `assembleRelease`. The
+  `assets/licenses/` texts (the 13 files listed in section 1) are committed
+  under `lwjgl3-android/src/main/assets/licenses/` so AGP packages them into
+  the aar. Note the collect step must copy `liblwjgl*.so` RECURSIVELY from
+  `bin/libs/native/linux/<arch>/org/lwjgl/`: only core `liblwjgl.so` is linked
+  at the top level; each binding lib (`liblwjgl_opengl/_nanovg/_stb/_tinyfd/
+  _vma.so`) lands in a per-module subdirectory (native-v1.0.0's top-level-only
+  find silently dropped all of them).
 
 ## 3. OpenAL Soft
 
