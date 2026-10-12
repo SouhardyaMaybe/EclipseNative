@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # ===========================================================================
-# FIRST DRAFT - build the LWJGL3 Android natives for one ABI.
+# Build the LWJGL3 Android natives for one ABI.
 #
-# Modeled on FCL-Team/lwjgl3 ci_build_android.bash (the build that produced
-# the currently shipped aar): cross-build libffi + freetype, fetch shaderc,
-# stub the code generator, then drive LWJGL's ant native build with ANDROID=1.
-# Iterate via CI runs.
+# Modeled on FCL-Team/lwjgl3 ci_build_android.bash: cross-build libffi +
+# freetype, fetch shaderc, stub the code generator, then drive LWJGL's ant
+# native build with ANDROID=1.
+#
+# The natives are built from the FCL-Team Android rebase branch whose base
+# matches the Java classes the launcher ships (upstream LWJGL does not build
+# Android natives and publishes no natives-android artifacts). JNI is
+# version-locked to the Java side, so this pin must track the jars in the
+# app repo's jre_lwjgl3glfw/libs/ (see docs/plan.md).
 # ===========================================================================
 
 set -euo pipefail
@@ -17,9 +22,15 @@ ECLIPSE_ARCH="${1:?usage: build-lwjgl3-android.sh <arm|arm64|x86|x86_64>}"
 source "${SCRIPT_DIR}/env.sh"
 
 LWJGL_REPO="${LWJGL_REPO:-https://github.com/FCL-Team/lwjgl3.git}"
-LWJGL_BRANCH="${LWJGL_BRANCH:-wip/rebase_3.3.3}"
-LIBFFI_VERSION="${LIBFFI_VERSION:-3.4.6}"
-FREETYPE_VERSION="${FREETYPE_VERSION:-2.13.2}"
+# 3.4.x JNI base (branch gradle.properties: lwjglVersion=3.4.1). The app
+# ships 3.4.3 Java classes; upstream 3.4.1->3.4.3 has no C changes in core
+# and only vendored-header churn in stb/vma, and the app-repo verification
+# harness exercises the shipped 3.4.3 classes against these natives on the
+# device JRE before the aar is consumed.
+LWJGL_BRANCH="${LWJGL_BRANCH:-wip/rebase_3.4.1}"
+# Versions match the reference ci_build_android.bash on that branch.
+LIBFFI_VERSION="${LIBFFI_VERSION:-3.5.2}"
+FREETYPE_VERSION="${FREETYPE_VERSION:-2.14.1}"
 
 BUILD_DIR="${WORKSPACE}/lwjgl3"
 rm -rf "${BUILD_DIR}"
@@ -97,21 +108,27 @@ export LWJGL_BUILD_OFFLINE=true
 # fail the build even when ant succeeds, so relax it for this pipeline only
 # (ant's own exit status still drives set -e).
 set +o pipefail
+# Binding set mirrors the reference ci_build_android.bash on the 3.4.1
+# branch, with two deliberate differences: sdl stays false (SDL3 for the
+# 26.3 client comes from the EclipseSDL3 pipeline, building a second SDL3
+# here would shadow it) and spng stays false (no consumer).
 yes | ant -Dplatform.linux=true \
     -Dbinding.assimp=false -Dbinding.bgfx=false -Dbinding.cuda=false \
     -Dbinding.egl=false -Dbinding.fmod=false -Dbinding.harfbuzz=false \
     -Dbinding.hwloc=false -Dbinding.jawt=false -Dbinding.jemalloc=false \
     -Dbinding.ktx=false -Dbinding.libdivide=false -Dbinding.llvm=false \
     -Dbinding.lmdb=false -Dbinding.lz4=false -Dbinding.meow=false \
-    -Dbinding.meshoptimizer=false -Dbinding.nfd=false -Dbinding.nuklear=false \
-    -Dbinding.odbc=false -Dbinding.opengles=false -Dbinding.opencl=false \
-    -Dbinding.openvr=false -Dbinding.openxr=false -Dbinding.opus=false \
-    -Dbinding.par=false -Dbinding.remotery=false -Dbinding.rpmalloc=false \
-    -Dbinding.sse=false -Dbinding.tinyexr=false -Dbinding.tootle=false \
-    -Dbinding.xxhash=false -Dbinding.yoga=false -Dbinding.zstd=false \
+    -Dbinding.meshoptimizer=false -Dbinding.msdfgen=false -Dbinding.nfd=false \
+    -Dbinding.nuklear=false -Dbinding.odbc=false -Dbinding.opengles=false \
+    -Dbinding.opencl=false -Dbinding.openvr=false -Dbinding.openxr=false \
+    -Dbinding.opus=false -Dbinding.par=false -Dbinding.remotery=false \
+    -Dbinding.renderdoc=false -Dbinding.rpmalloc=false -Dbinding.sdl=false \
+    -Dbinding.spng=false -Dbinding.sse=false -Dbinding.tinyexr=false \
+    -Dbinding.tootle=false -Dbinding.xxhash=false -Dbinding.yoga=false \
+    -Dbinding.zstd=false \
     -Dbinding.shaderc=true -Dbinding.vulkan=true -Dbinding.vma=true \
     -Dbinding.spvc=true \
-    -Dbuild.type=release/3.3.3 \
+    -Dbuild.type=release/3.4.1 \
     -Djavadoc.skip=true \
     compile compile-native release
 set -o pipefail

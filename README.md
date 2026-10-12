@@ -26,6 +26,11 @@ This matches the layout of the aar the launcher currently ships (verified by
 inspecting `EclipseLauncher/libs/lwjgl3-natives-release.aar`, read-only).
 
 - Upstream: https://github.com/LWJGL/lwjgl3 (BSD-3-Clause)
+- Source pin: https://github.com/FCL-Team/lwjgl3 branch `wip/rebase_3.4.1`
+  (LWJGL 3.4.1 base + Android port; upstream LWJGL publishes no Android
+  natives). Must stay in sync with the LWJGL Java jars the app ships in
+  `jre_lwjgl3glfw/libs/` (currently 3.4.3; JNI 3.4.1->3.4.3 compatibility
+  is verified in the app repo's upgrade report before consumption).
 - Reference Android builds (what the shipped aar was evidently built from):
   - https://github.com/FCL-Team/lwjgl3 (`ci_build_android.bash`, BSD-3-Clause)
   - https://github.com/PojavLauncherTeam/lwjgl3 (branch `wip/rebase_3.3.3`)
