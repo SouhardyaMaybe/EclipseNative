@@ -36,6 +36,13 @@ rm -rf "$FFI_DIR"
 mkdir -p "$FFI_DIR"
 cd "$FFI_DIR"
 
+# The compat header must not be force-included while assembling sysv.S: clang
+# preprocesses .S files and would try to parse C declarations as assembly.
+# closures.c is the only file that calls memfd_create, so it is compiled first
+# with the header, then the rest of the library is built with the plain flags.
+FFI_CFLAGS="-O2 -fPIC -DECLIPSE_COMPAT_REDIRECT_MEMFD"
+FFI_CLOSURE_CFLAGS="$FFI_CFLAGS -include $ROOT/compat/android_compat.h"
+
 "$SRC/configure" \
     --host="$TRIPLE" \
     --prefix="$PREFIX" \
@@ -49,10 +56,11 @@ cd "$FFI_DIR"
     AR="$AR" \
     RANLIB="$RANLIB" \
     STRIP="$STRIP" \
-    CFLAGS="-O2 -fPIC -include $ROOT/compat/android_compat.h -DECLIPSE_COMPAT_REDIRECT_MEMFD" \
+    CFLAGS="$FFI_CFLAGS" \
     ac_cv_func_memfd_create=yes
 
-make -j"$JOBS"
+make -j"$JOBS" src/closures.lo CFLAGS="$FFI_CLOSURE_CFLAGS"
+make -j"$JOBS" CFLAGS="$FFI_CFLAGS"
 make install
 
 [ -f "$LIB" ] || die "libffi did not install $LIB"

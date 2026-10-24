@@ -84,12 +84,16 @@ re-verifying the SHA-256.
 `--disable-shared --enable-static`, and:
 
 ```text
-CFLAGS="-O2 -fPIC -include compat/android_compat.h -DECLIPSE_COMPAT_REDIRECT_MEMFD"
+CFLAGS="-O2 -fPIC -DECLIPSE_COMPAT_REDIRECT_MEMFD"
 ac_cv_func_memfd_create=yes
 ```
 
 The cache answer is required because API 26 headers do not declare
-`memfd_create`; the shim provides the syscall. The resulting `libffi.a` is
+`memfd_create`; the shim provides the syscall. `src/closures.c` is the only
+translation unit that calls it, so that one object is built with
+`-include compat/android_compat.h`; the rest of the library, including
+`src/aarch64/sysv.S`, is built without the C header. Force-including it globally
+would make clang parse C declarations as assembly. The resulting `libffi.a` is
 linked into `liblwjgl.so`; it is never shipped as a separate file.
 
 ### LWJGL

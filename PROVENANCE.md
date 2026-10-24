@@ -147,7 +147,9 @@ Why the memfd path is mandatory: Android mounts `/data` `noexec` and has no
 `configure` probe is answered with `ac_cv_func_memfd_create=yes`; the
 force-included header redirects the call to the shim. This is an autoconf cache
 answer plus a macro, not a source patch. `MFD_CLOEXEC` is defined because API 26
-headers predate it.
+headers predate it. The header is applied only to `src/closures.c`, the sole
+caller: libffi also assembles `src/aarch64/sysv.S`, and force-including a C
+header into a `.S` file makes clang parse the declarations as assembly.
 
 The `aligned_alloc` macro is enabled only for the two core units that call it
 directly and for the stb/VMA modules whose allocator setup references it. It is
