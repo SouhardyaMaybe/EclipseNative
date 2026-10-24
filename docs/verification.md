@@ -83,8 +83,9 @@ the link map, not as noise to ignore.
 
 - exactly eight `.so` files per required ABI, no extras and no omissions;
 - the ELF gate passes on the packaged copies;
-- the AAR contains `AndroidManifest.xml`, `R.txt`, the eight libraries, all
-  license texts and `assets/eclipsenatives/BUILD-MANIFEST.json`;
+- the AAR contains `AndroidManifest.xml`, `classes.jar`, `R.txt`,
+  `META-INF/com/android/build/gradle/aar-metadata.properties`, the eight
+  libraries, all license texts and `assets/eclipsenatives/BUILD-MANIFEST.json`;
 - the zip contains the same payload, `BUILD-MANIFEST.json`, `SHA256SUMS.txt`
   and the licenses;
 - `SHA256SUMS.txt` covers the AAR, the zip and the manifest;

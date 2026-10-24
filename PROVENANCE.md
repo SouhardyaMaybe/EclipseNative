@@ -108,11 +108,13 @@ OpenAL for its resampler; its notice is in `licenses/pffft.txt`.
 
 Source: Shaderc v2026.3 plus the pinned glslang, SPIRV-Tools and SPIRV-Headers
 trees. The upstream `third_party/` layout is recreated with symlinks to those
-verified trees, so no source is copied or modified. glslang, SPIRV-Tools and
-SPIRV-Headers retain their own licenses; see `licenses/glslang.txt`,
-`licenses/spirv-tools.txt`, `licenses/spirv-headers.txt` and
-`licenses/khronos-vulkan.txt`. Tests, examples, command-line tools and install
-rules are disabled.
+verified trees, so no source is copied or modified. Upstream names the shared
+target `libshaderc_shared.so.1`; it is copied to `libshaderc.so`, the name
+LWJGL's `Shaderc` class opens, and its SONAME is left unchanged. glslang,
+SPIRV-Tools and SPIRV-Headers retain their own licenses; see
+`licenses/glslang.txt`, `licenses/spirv-tools.txt`,
+`licenses/spirv-headers.txt` and `licenses/khronos-vulkan.txt`. Tests, examples,
+command-line tools and install rules are disabled.
 
 ### `libspirv-cross.so`
 

@@ -42,8 +42,11 @@ cmake_configure "$SRC" "$BUILD" \
     -DSPIRV-Headers_SOURCE_DIR="$SOURCE_DIR/spirv-headers"
 cmake_build "$BUILD"
 
-LIBRARY="$(find "$BUILD" -maxdepth 2 -name 'libshaderc.so*' -type f | head -1)"
-[ -n "$LIBRARY" ] || die "Shaderc did not produce libshaderc.so"
+# Upstream builds the shared library as libshaderc_shared.so.1 (SOVERSION 1);
+# LWJGL looks for libshaderc.so. The copy is renamed, the SONAME is left alone:
+# the library is only opened by absolute path, so the loader never consults it.
+LIBRARY="$(find "$BUILD" -maxdepth 2 -name 'libshaderc_shared.so*' -type f | head -1)"
+[ -n "$LIBRARY" ] || die "Shaderc did not produce libshaderc_shared.so"
 cp -f "$LIBRARY" "$OUT_ABI/libshaderc.so"
 strip_library "$OUT_ABI/libshaderc.so"
 elf_report "$OUT_ABI/libshaderc.so"

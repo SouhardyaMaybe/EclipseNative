@@ -58,7 +58,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [preflight, native]
-    if: ${{ github.event_name == 'push' || github.event.inputs.dry_run == false }}
+    if: ${{ github.event_name == 'push' || !inputs.dry_run }}
     runs-on: ubuntu-24.04
 
     steps:

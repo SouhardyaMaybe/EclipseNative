@@ -171,6 +171,13 @@ def main() -> int:
     manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
 
     manifest_xml = b'<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android" />\n'
+    aar_metadata = (
+        "aarFormatVersion=1.0\n"
+        "aarMetadataVersion=1.0\n"
+        "minCompileSdk=26\n"
+        "minCompileSdkExtension=0\n"
+        "minAndroidGradlePluginVersion=8.0.0\n"
+    ).encode()
     license_files = sorted(LICENSES.glob("*.txt"))
 
     aar_path = OUT / f"eclipsenatives-{version_safe}.aar"
@@ -181,6 +188,11 @@ def main() -> int:
         zip_entry(archive, "AndroidManifest.xml", manifest_xml)
         zip_entry(archive, "classes.jar", empty_jar.getvalue())
         zip_entry(archive, "R.txt", b"")
+        zip_entry(
+            archive,
+            "META-INF/com/android/build/gradle/aar-metadata.properties",
+            aar_metadata,
+        )
         zip_entry(archive, "assets/eclipsenatives/BUILD-MANIFEST.json", manifest_bytes)
         for license_file in license_files:
             zip_entry(

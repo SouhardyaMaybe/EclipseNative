@@ -90,11 +90,11 @@ jobs:
           ABI: ${{ matrix.abi }}
         run: |
           set -euo pipefail
-          scripts/build-lwjgl.sh "$ABI"
-          scripts/build-freetype.sh "$ABI"
-          scripts/build-openal.sh "$ABI"
-          scripts/build-spirv-cross.sh "$ABI"
-          scripts/build-shaderc.sh "$ABI"
+          bash scripts/build-lwjgl.sh "$ABI"
+          bash scripts/build-freetype.sh "$ABI"
+          bash scripts/build-openal.sh "$ABI"
+          bash scripts/build-spirv-cross.sh "$ABI"
+          bash scripts/build-shaderc.sh "$ABI"
 
       - name: Run the ELF gate
         env:

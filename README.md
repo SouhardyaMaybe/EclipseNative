@@ -118,12 +118,12 @@ You do not need to: Actions is the authoritative builder. If you want to
 reproduce a build, install NDK r28c, set `ANDROID_NDK_ROOT`, then:
 
 ```bash
-scripts/build-lwjgl.sh arm64-v8a
-scripts/build-freetype.sh arm64-v8a
-scripts/build-openal.sh arm64-v8a
-scripts/build-spirv-cross.sh arm64-v8a
-scripts/build-shaderc.sh arm64-v8a
-scripts/package.py --require-abi arm64-v8a
+bash scripts/build-lwjgl.sh arm64-v8a
+bash scripts/build-freetype.sh arm64-v8a
+bash scripts/build-openal.sh arm64-v8a
+bash scripts/build-spirv-cross.sh arm64-v8a
+bash scripts/build-shaderc.sh arm64-v8a
+python3 scripts/package.py --require-abi arm64-v8a
 ```
 
 Sources are downloaded from the lock file into `.build/`, verified against

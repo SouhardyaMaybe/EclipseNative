@@ -59,12 +59,12 @@ All four are ignored by `.gitignore`. Nothing under them is committed.
 ```bash
 export ANDROID_NDK_ROOT=/path/to/android-ndk-r28c
 
-scripts/build-lwjgl.sh arm64-v8a
-scripts/build-freetype.sh arm64-v8a
-scripts/build-openal.sh arm64-v8a
-scripts/build-spirv-cross.sh arm64-v8a
-scripts/build-shaderc.sh arm64-v8a
-scripts/package.py --require-abi arm64-v8a
+bash scripts/build-lwjgl.sh arm64-v8a
+bash scripts/build-freetype.sh arm64-v8a
+bash scripts/build-openal.sh arm64-v8a
+bash scripts/build-spirv-cross.sh arm64-v8a
+bash scripts/build-shaderc.sh arm64-v8a
+python3 scripts/package.py --require-abi arm64-v8a
 ```
 
 `build-lwjgl.sh` calls `build-libffi.sh` automatically if
@@ -165,6 +165,11 @@ The script also passes `-DSPIRV-Headers_SOURCE_DIR=<...>/spirv-headers` so that
 scopes differ. Tests, examples, executables, installation, copyright checks and
 `-Werror` are off. `glslang`, `SPIRV-Tools` and `SPIRV-Headers` are compiled
 from their own pinned trees, not from bundled copies.
+
+Upstream's shared target is `libshaderc_shared.so.1`. LWJGL's `Shaderc` class
+opens `libshaderc.so`, so the script copies the real file to that name and
+leaves the SONAME alone. As with SPIRV-Cross, the library is loaded by absolute
+path and the SONAME is never used for dependency resolution.
 
 ## 5. Packaging
 
