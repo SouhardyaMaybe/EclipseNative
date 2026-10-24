@@ -1,0 +1,225 @@
+name: Native
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sources.lock.json"
+      - "scripts/**"
+      - "compat/**"
+      - "licenses/**"
+      - "docs/**"
+      - "README.md"
+      - "PROVENANCE.md"
+      - "NOTICE"
+      - "LICENSE"
+      - ".github/workflows/native.yml"
+      - ".github/workflows/release.yml"
+  pull_request:
+    paths:
+      - "sources.lock.json"
+      - "scripts/**"
+      - "compat/**"
+      - "licenses/**"
+      - "docs/**"
+      - "README.md"
+      - "PROVENANCE.md"
+      - "NOTICE"
+      - "LICENSE"
+      - ".github/workflows/native.yml"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build (defaults to the caller's ref)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.abi }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, x86_64]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+
+      - name: Install NDK r28c
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "ndk;28.2.13676358"
+          echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT:-$ANDROID_HOME}/ndk/28.2.13676358" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT:-$ANDROID_HOME}/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: Check the host toolchain
+        run: |
+          set -euo pipefail
+          if ! command -v cmake >/dev/null || ! command -v ninja >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends cmake ninja-build
+          fi
+          cmake --version | head -1
+          ninja --version
+          python3 --version
+          bash --version | head -1
+
+      - name: Validate the source lock
+        run: python3 scripts/lock.py --check
+
+      - name: Fetch and verify sources
+        run: bash scripts/fetch-sources.sh
+
+      - name: Build the native libraries
+        env:
+          ABI: ${{ matrix.abi }}
+        run: |
+          set -euo pipefail
+          scripts/build-lwjgl.sh "$ABI"
+          scripts/build-freetype.sh "$ABI"
+          scripts/build-openal.sh "$ABI"
+          scripts/build-spirv-cross.sh "$ABI"
+          scripts/build-shaderc.sh "$ABI"
+
+      - name: Run the ELF gate
+        env:
+          ABI: ${{ matrix.abi }}
+        run: |
+          set -euo pipefail
+          python3 scripts/check-elf.py --abi "$ABI" out/jni/"$ABI"/*.so
+          readelf -dW out/jni/"$ABI"/*.so | grep -E 'NEEDED|SONAME' || true
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: natives-${{ matrix.abi }}
+          path: out/jni
+          if-no-files-found: error
+          retention-days: 7
+
+  package:
+    name: Package AAR and zip
+    needs: build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: natives-*
+          merge-multiple: true
+          path: out/jni
+
+      - name: Show the staged tree
+        run: find out/jni -type f -printf '%P %s B\n' | sort
+
+      - name: Package and re-run the gate
+        run: |
+          set -euo pipefail
+          python3 scripts/package.py \
+            --require-abi arm64-v8a \
+            --require-abi x86_64
+          (cd out && sha256sum -c SHA256SUMS.txt)
+
+      - name: Check the AAR payload
+        run: |
+          set -euo pipefail
+          aar=$(ls out/eclipsenatives-*.aar)
+          unzip -l "$aar"
+          for abi in arm64-v8a x86_64; do
+            count=$(unzip -Z1 "$aar" | grep -c "^jni/$abi/.*\\.so$")
+            test "$count" -eq 8
+          done
+          unzip -Z1 "$aar" | grep -q 'assets/eclipsenatives/BUILD-MANIFEST.json'
+          unzip -Z1 "$aar" | grep -q 'assets/licenses/openal-lgpl-2.0.txt'
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: eclipsenatives
+          path: |
+            out/eclipsenatives-*.aar
+            out/eclipsenatives-*.zip
+            out/BUILD-MANIFEST.json
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  verify:
+    name: Verify the package
+    needs: package
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: eclipsenatives
+          path: dist
+
+      - name: Verify checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c SHA256SUMS.txt
+
+      - name: Re-run the ELF gate from the AAR
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/aar-check
+          mkdir -p /tmp/aar-check
+          unzip -q dist/eclipsenatives-*.aar -d /tmp/aar-check
+          for abi in arm64-v8a x86_64; do
+            python3 scripts/check-elf.py --abi "$abi" /tmp/aar-check/jni/"$abi"/*.so
+          done
+
+      - name: Validate the manifest against the lock
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, sys
+          manifest = json.loads(pathlib.Path("dist/BUILD-MANIFEST.json").read_text())
+          lock = json.loads(pathlib.Path("sources.lock.json").read_text())
+          assert manifest["component"] == "EclipseNatives"
+          assert manifest["version"] == lock["version"], (manifest["version"], lock["version"])
+          assert sorted(manifest["sources"]) == sorted(lock["sources"]), "source set differs from lock"
+          for name, source in manifest["sources"].items():
+              assert source["sha256"] == lock["sources"][name]["sha256"], name
+              assert source["license"] == lock["sources"][name]["license"], name
+          for abi in ("arm64-v8a", "x86_64"):
+              names = sorted(entry["name"] for entry in manifest["libraries"][abi])
+              assert names == sorted([
+                  "libfreetype.so", "liblwjgl.so", "liblwjgl_opengl.so",
+                  "liblwjgl_stb.so", "liblwjgl_vma.so", "libopenal.so",
+                  "libshaderc.so", "libspirv-cross.so",
+              ]), names
+          print("manifest matches sources.lock.json and the expected eight libraries per ABI")
+          PY
+
+      - name: Summarize the binaries
+        run: |
+          set -euo pipefail
+          for abi in arm64-v8a x86_64; do
+            echo "== $abi"
+            file /tmp/aar-check/jni/"$abi"/*.so
+            python3 scripts/check-elf.py --abi "$abi" --quiet-warnings /tmp/aar-check/jni/"$abi"/*.so
+          done

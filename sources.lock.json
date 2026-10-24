@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "component": "EclipseNatives",
+  "version": "0.1.0",
+  "notes": "Every archive is fetched from the upstream project's own repository or release and verified before extraction. GitHub-generated archives are not guaranteed to be byte-stable forever; if upstream regenerates one, the build fails loudly and the lock is refreshed with review.",
+  "sources": {
+    "lwjgl": {
+      "version": "3.4.3",
+      "url": "https://codeload.github.com/LWJGL/lwjgl3/tar.gz/30fac9b95f99cda97312232be25ba55297bf9951",
+      "sha256": "db97020d78fb6f6086121fba9c99ac07a50c4188a7658b06d488a2eae021de40",
+      "root": "lwjgl3-30fac9b95f99cda97312232be25ba55297bf9951",
+      "license": "BSD-3-Clause"
+    },
+    "libffi": {
+      "version": "3.8.0",
+      "url": "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz",
+      "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+      "root": "libffi-3.8.0",
+      "license": "MIT"
+    },
+    "freetype": {
+      "version": "2.14.3",
+      "url": "https://codeload.github.com/freetype/freetype/tar.gz/0a0221a1347e2f1e07c395263540026e9a0aa7c7",
+      "sha256": "11cd478953fc1d382f20a233b8e2aed6c31b47cbf0568c4bdb3334bcc1550698",
+      "root": "freetype-0a0221a1347e2f1e07c395263540026e9a0aa7c7",
+      "license": "FreeType License or GPL-2.0-or-later"
+    },
+    "openal": {
+      "version": "1.25.1 (commit 7f9c6de)",
+      "url": "https://codeload.github.com/kcat/openal-soft/tar.gz/7f9c6de1162b1d4604b9a2f8bcd6c53021566221",
+      "sha256": "a6423b0efd2fee3d7d07c169388e7bf453aab5d5b57fb9bc335d970b7e44e397",
+      "root": "openal-soft-7f9c6de1162b1d4604b9a2f8bcd6c53021566221",
+      "license": "LGPL-2.0-or-later"
+    },
+    "shaderc": {
+      "version": "v2026.3",
+      "url": "https://codeload.github.com/google/shaderc/tar.gz/2c8cae778eec0283b44acbe7ed1a386865d78799",
+      "sha256": "e6d6492a363cdef271e466f67cae3ad0d48f7e748491b8e2fe51424c08e391ad",
+      "root": "shaderc-2c8cae778eec0283b44acbe7ed1a386865d78799",
+      "license": "Apache-2.0"
+    },
+    "glslang": {
+      "version": "commit 168d452 (Shaderc v2026.3 DEPS)",
+      "url": "https://codeload.github.com/KhronosGroup/glslang/tar.gz/168d452a4f460d24b588fed08477a81c44ee27a1",
+      "sha256": "c167b2474af06cbab93abae8249efaf88fb79a09f30488e2a24d399e4258ce7a",
+      "root": "glslang-168d452a4f460d24b588fed08477a81c44ee27a1",
+      "license": "BSD-3-Clause, Apache-2.0 and MIT (composite)"
+    },
+    "spirv-tools": {
+      "version": "commit b707790 (Shaderc v2026.3 DEPS)",
+      "url": "https://codeload.github.com/KhronosGroup/SPIRV-Tools/tar.gz/b707790a898e44038547df54580022fc1cf89c3d",
+      "sha256": "05d8af89737bde57571c48dbd36714c9f520a69623e14de72c3be6b600e277d6",
+      "root": "SPIRV-Tools-b707790a898e44038547df54580022fc1cf89c3d",
+      "license": "Apache-2.0"
+    },
+    "spirv-headers": {
+      "version": "commit 29981f6 (Shaderc v2026.3 DEPS)",
+      "url": "https://codeload.github.com/KhronosGroup/SPIRV-Headers/tar.gz/29981f65241605e08b0ede4cfeb999fe3b723c6a",
+      "sha256": "232899f1ad4104fb5bc377b94596c7621575eee62ad9a9e8f929b63a7dd8a7ad",
+      "root": "SPIRV-Headers-29981f65241605e08b0ede4cfeb999fe3b723c6a",
+      "license": "Apache-2.0 and MIT (composite)"
+    },
+    "spirv-cross": {
+      "version": "vulkan-sdk-1.4.357.0 (6c09849)",
+      "url": "https://codeload.github.com/KhronosGroup/SPIRV-Cross/tar.gz/6c09849fe88c48eaed08413aa022aaa136a3a057",
+      "sha256": "b81b9956289950570953738e666a031ca32ff64e4fc925eba89f227c42109518",
+      "root": "SPIRV-Cross-6c09849fe88c48eaed08413aa022aaa136a3a057",
+      "license": "Apache-2.0"
+    }
+  }
+}
