@@ -170,6 +170,14 @@ scopes differ. Tests, examples, executables, installation, copyright checks and
 `-Werror` are off. `glslang`, `SPIRV-Tools` and `SPIRV-Headers` are compiled
 from their own pinned trees, not from bundled copies.
 
+Shaderc v2026.3 sets `GLSLANG_ENABLE_INSTALL` to the generator expression
+`$<NOT:${SKIP_GLSLANG_INSTALL}>`. `option()` stores that string as-is and
+`if()` treats it as true, so glslang emits `install(EXPORT)` rules that
+reference `SPIRV-Tools-opt`, a target SPIRV-Tools does not export. The script
+passes `CMAKE_PROJECT_glslang_INCLUDE_BEFORE=compat/glslang_pre.cmake`, which
+sets the option off inside glslang's own scope before it is read. No upstream
+file is patched.
+
 Upstream's shared target is `libshaderc_shared.so.1`. LWJGL's `Shaderc` class
 opens `libshaderc.so`, so the script copies the real file to that name and
 leaves the SONAME alone. As with SPIRV-Cross, the library is loaded by absolute
@@ -233,6 +241,7 @@ suppress a tag-triggered run.
 | `undefined symbol: memfd_create` | libffi was configured without `ac_cv_func_memfd_create=yes`, or the compat header was not force-included. |
 | `undefined symbol: aligned_alloc` | a LWJGL translation unit that references it was built without `-DECLIPSE_COMPAT_REDIRECT_ALLOC`. |
 | `SPIRV-Headers was not found` | the symlink or `-DSPIRV-Headers_SOURCE_DIR` is missing. |
+| `glslang-targets ... SPIRV-Tools-opt is not in any export set` | `compat/glslang_pre.cmake` was not passed through `CMAKE_PROJECT_glslang_INCLUDE_BEFORE`. |
 | `PT_LOAD p_align=0x1000` | the link line lost `-Wl,-z,max-page-size=16384`. |
 | `DT_NEEDED on libc++_shared.so` | a CMake target ignored `ANDROID_STL=c++_static`. |
 | `DT_NEEDED on libGL.so` | a desktop GL link leaked in; OpenGL must be dlsym-only. |

@@ -39,7 +39,8 @@ cmake_configure "$SRC" "$BUILD" \
     -DSPIRV_SKIP_TESTS=ON \
     -DSPIRV_SKIP_EXECUTABLES=ON \
     -DSPIRV_WERROR=OFF \
-    -DSPIRV-Headers_SOURCE_DIR="$SOURCE_DIR/spirv-headers"
+    -DSPIRV-Headers_SOURCE_DIR="$SOURCE_DIR/spirv-headers" \
+    -DCMAKE_PROJECT_glslang_INCLUDE_BEFORE="$ROOT/compat/glslang_pre.cmake"
 cmake_build "$BUILD"
 
 # Upstream builds the shared library as libshaderc_shared.so.1 (SOVERSION 1);
