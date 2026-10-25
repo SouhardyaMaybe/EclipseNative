@@ -30,6 +30,22 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
+/* LWJGL bundles a liburing shim whose compat.h predates the Linux 5.x UAPI
+ * and assumes <linux/time_types.h> is unavailable. NDK r28 ships the UAPI
+ * headers, so including both redefines struct __kernel_timespec. Skip the
+ * shim and take the definitions from the sysroot instead. The only shim
+ * definition the UAPI lacks is BLOCK_URING_CMD_DISCARD. */
+#if defined(__ANDROID__)
+#define LIBURING_COMPAT_H 1
+#include <linux/types.h>
+#include <linux/ioctl.h>
+#include <linux/openat2.h>
+#include <linux/time_types.h>
+#ifndef BLOCK_URING_CMD_DISCARD
+#define BLOCK_URING_CMD_DISCARD _IO(0x12, 0)
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
